@@ -13,7 +13,7 @@ import (
 	"github.com/thomas-bamilo/dbconf"
 )
 
-// CreateTtrRfcTable queries bi_database to create an array of TtrRfcRow which represent TtrRfcTable, the table which records: "time to respond" and "return from customer score" for each seller on a year_month basis
+// LoadSellerDisciplineTableValidRowToBaaDb loads SellerDisciplineTableValidRow to baa database
 func LoadSellerDisciplineTableValidRowToBaaDb(sellerDisciplineTableValidRow []sellerdisciplinerow.SellerDisciplineRow) {
 
 	// fetch database configuration
@@ -54,8 +54,9 @@ func LoadSellerDisciplineTableValidRowToBaaDb(sellerDisciplineTableValidRow []se
 		,sku 
 		,start_time_troubleshoot
 		,end_time_troubleshoot 
+		,number_of_item
 		,id_supplier) 
-	VALUES (@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14,@p15)`
+	VALUES (@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14,@p15,@p16)`
 	insertInboundIssueTable, err := db.Prepare(insertInboundIssueTableStr)
 	if err != nil {
 		log.Fatal(err)
@@ -89,6 +90,7 @@ func LoadSellerDisciplineTableValidRowToBaaDb(sellerDisciplineTableValidRow []se
 			sellerDisciplineTableValidRow[i].Sku,
 			sellerDisciplineTableValidRow[i].StartTimeTroubleshoot,
 			sellerDisciplineTableValidRow[i].EndTimeTroubleshoot,
+			sellerDisciplineTableValidRow[i].NumberOfItem,
 			sellerDisciplineTableValidRow[i].IDSupplier,
 		)
 		if err != nil {
@@ -109,6 +111,7 @@ func LoadSellerDisciplineTableValidRowToBaaDb(sellerDisciplineTableValidRow []se
 					Sku:                          sellerDisciplineTableValidRow[i].Sku,
 					StartTimeTroubleshoot: sellerDisciplineTableValidRow[i].StartTimeTroubleshoot,
 					EndTimeTroubleshoot:   sellerDisciplineTableValidRow[i].EndTimeTroubleshoot,
+					NumberOfItem:          sellerDisciplineTableValidRow[i].NumberOfItem,
 					IDSupplier:            sellerDisciplineTableValidRow[i].IDSupplier})
 		}
 		time.Sleep(1 * time.Millisecond)

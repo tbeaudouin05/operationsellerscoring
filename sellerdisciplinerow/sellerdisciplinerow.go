@@ -24,7 +24,8 @@ type SellerDisciplineRow struct {
 	BrandDirty                   string `json:"brand_dirty"`
 	Sku                          string `json:"sku"`
 	StartTimeTroubleshoot        string `json:"start_time_troubleshoot"`
-	EndTimeTroubleshoot          string `json:"endi_time_troubleshoot"`
+	EndTimeTroubleshoot          string `json:"end_time_troubleshoot"`
+	NumberOfItem                 int    `json:"number_of_item"`
 	IDSupplier                   string `json:"id_supplier"`
 	IDInboundIssue               string `json:"id_inbound_issue"`
 	DurationTroubleshoot         int    `json:"duration_troubleshoot"`
@@ -53,9 +54,10 @@ func (row SellerDisciplineRow) validateRowFormat() error {
 		// EmailAddress cannot be empty, and must be an email
 		validation.Field(&row.EmailAddress, validation.Required, is.Email),
 		validation.Field(&row.OriginalSellerFoundYesNo, validation.In("Yes", "No")),
-		validation.Field(&row.Sku, validation.By(checkSku)),
+		validation.Field(&row.Sku, validation.By(checkSku), validation.Length(0, 30)),
 		validation.Field(&row.StartTimeTroubleshoot, validation.Date("3:04:05 PM")),
 		validation.Field(&row.EndTimeTroubleshoot, validation.Date("3:04:05 PM")),
+		validation.Field(&row.NumberOfItem, validation.Required, validation.Min(1)),
 		// IDSupplier cannot be empty, and must be an integer
 		validation.Field(&row.IDSupplier, is.Int),
 		validation.Field(&row.DurationTroubleshoot, validation.Min(0)),

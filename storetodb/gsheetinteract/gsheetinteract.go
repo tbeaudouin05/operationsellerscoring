@@ -2,6 +2,7 @@ package gsheetinteract
 
 import (
 	"io/ioutil"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -22,6 +23,7 @@ func CreateSellerDisciplineTable(gsheet *spreadsheet.Sheet) []sellerdisciplinero
 
 		StartTimeTroubleshootP, _ := time.Parse(row[14].Value, "1/2/2006 15:04:05")
 		EndTimeTroubleshootP, _ := time.Parse(row[15].Value, "1/2/2006 15:04:05")
+		NumberOfItemInt, _ := strconv.Atoi(row[16].Value)
 
 		sellerDisciplineTable = append(sellerDisciplineTable,
 			sellerdisciplinerow.SellerDisciplineRow{
@@ -38,6 +40,7 @@ func CreateSellerDisciplineTable(gsheet *spreadsheet.Sheet) []sellerdisciplinero
 				Sku:                          strings.ToUpper(eraseAllSpace(row[13].Value)),
 				StartTimeTroubleshoot: row[14].Value,
 				EndTimeTroubleshoot:   row[15].Value,
+				NumberOfItem:          NumberOfItemInt,
 				IDSupplier:            row[17].Value,
 				IDInboundIssue:        row[18].Value,
 				DurationTroubleshoot:  int(EndTimeTroubleshootP.Sub(StartTimeTroubleshootP)),

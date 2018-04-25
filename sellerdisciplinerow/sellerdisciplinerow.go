@@ -17,13 +17,11 @@ type SellerDisciplineRow struct {
 	OrderNumber                  string `json:"order_number"`
 	ItemIssueInboundFailedReason string `json:"item_issue_inbound_failed_reason"`
 	OrderCancelledYesNo          string `json:"order_cancelled_yes_no"`
-	Comment                      string `json:"comment"`
 	EmailAddress                 string `json:"email_address"`
 	OriginalSellerFoundYesNo     string `json:"original_seller_found_yes_no"`
 	SupplierName                 string `json:"supplier_name"`
 	CategoryDirty                string `json:"category_dirty"`
 	BrandDirty                   string `json:"brand_dirty"`
-	Description                  string `json:"description"`
 	Sku                          string `json:"sku"`
 	StartTimeTroubleshoot        string `json:"start_time_troubleshoot"`
 	EndTimeTroubleshoot          string `json:"endi_time_troubleshoot"`

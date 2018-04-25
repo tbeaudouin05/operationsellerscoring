@@ -46,17 +46,16 @@ func LoadSellerDisciplineTableValidRowToBaaDb(sellerDisciplineTableValidRow []se
 		,order_number 
 		,item_issue_inbound_failed_reason 
 		,order_cancelled_yes_no 
-		,comment 
 		,email_address 
+		,original_seller_found_yes_no
 		,supplier_name 
 		,category_dirty
-		,brand_dirty
-		,description 
+		,brand_dirty 
 		,sku 
 		,start_time_troubleshoot
 		,end_time_troubleshoot 
 		,id_supplier) 
-	VALUES (@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14,@p15,@p16)`
+	VALUES (@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14,@p15)`
 	insertInboundIssueTable, err := db.Prepare(insertInboundIssueTableStr)
 	if err != nil {
 		log.Fatal(err)
@@ -82,12 +81,11 @@ func LoadSellerDisciplineTableValidRowToBaaDb(sellerDisciplineTableValidRow []se
 			sellerDisciplineTableValidRow[i].OrderNumber,
 			sellerDisciplineTableValidRow[i].ItemIssueInboundFailedReason,
 			sellerDisciplineTableValidRow[i].OrderCancelledYesNo,
-			sellerDisciplineTableValidRow[i].Comment,
 			sellerDisciplineTableValidRow[i].EmailAddress,
+			sellerDisciplineTableValidRow[i].OriginalSellerFoundYesNo,
 			sellerDisciplineTableValidRow[i].SupplierName,
 			sellerDisciplineTableValidRow[i].CategoryDirty,
 			sellerDisciplineTableValidRow[i].BrandDirty,
-			sellerDisciplineTableValidRow[i].Description,
 			sellerDisciplineTableValidRow[i].Sku,
 			sellerDisciplineTableValidRow[i].StartTimeTroubleshoot,
 			sellerDisciplineTableValidRow[i].EndTimeTroubleshoot,
@@ -103,12 +101,11 @@ func LoadSellerDisciplineTableValidRowToBaaDb(sellerDisciplineTableValidRow []se
 					OrderNumber:                  sellerDisciplineTableValidRow[i].OrderNumber,
 					ItemIssueInboundFailedReason: sellerDisciplineTableValidRow[i].ItemIssueInboundFailedReason,
 					OrderCancelledYesNo:          sellerDisciplineTableValidRow[i].OrderCancelledYesNo,
-					Comment:                      sellerDisciplineTableValidRow[i].Comment,
 					EmailAddress:                 sellerDisciplineTableValidRow[i].EmailAddress,
+					OriginalSellerFoundYesNo:     sellerDisciplineTableValidRow[i].OriginalSellerFoundYesNo,
 					SupplierName:                 sellerDisciplineTableValidRow[i].SupplierName,
 					CategoryDirty:                sellerDisciplineTableValidRow[i].CategoryDirty,
 					BrandDirty:                   sellerDisciplineTableValidRow[i].BrandDirty,
-					Description:                  sellerDisciplineTableValidRow[i].Description,
 					Sku:                          sellerDisciplineTableValidRow[i].Sku,
 					StartTimeTroubleshoot: sellerDisciplineTableValidRow[i].StartTimeTroubleshoot,
 					EndTimeTroubleshoot:   sellerDisciplineTableValidRow[i].EndTimeTroubleshoot,

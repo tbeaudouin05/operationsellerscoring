@@ -2,6 +2,9 @@ package gsheetinteract
 
 import (
 	"io/ioutil"
+	"strings"
+	"time"
+	"unicode"
 
 	"github.com/thomas-bamilo/operationsellerscoring/sellerdisciplinerow"
 	"golang.org/x/net/context"
@@ -17,25 +20,29 @@ func CreateSellerDisciplineTable(gsheet *spreadsheet.Sheet) []sellerdisciplinero
 
 	for _, row := range gsheet.Rows[1:] {
 
+		StartTimeTroubleshootP, _ := time.Parse(row[14].Value, "1/2/2006 15:04:05")
+		EndTimeTroubleshootP, _ := time.Parse(row[15].Value, "1/2/2006 15:04:05")
+
 		sellerDisciplineTable = append(sellerDisciplineTable,
 			sellerdisciplinerow.SellerDisciplineRow{
 				Timestamp:                    row[0].Value,
-				PoNumber:                     row[2].Value,
-				OrderNumber:                  row[3].Value,
+				PoNumber:                     strings.ToUpper(eraseAllSpace(row[2].Value)),
+				OrderNumber:                  eraseAllSpace(row[3].Value),
 				ItemIssueInboundFailedReason: row[4].Value,
 				OrderCancelledYesNo:          row[5].Value,
 				Comment:                      row[6].Value,
 				EmailAddress:                 row[7].Value,
 				OriginalSellerFoundYesNo:     row[8].Value,
 				SupplierName:                 row[9].Value,
-				Category:                     row[10].Value,
-				Brand:                        row[11].Value,
+				CategoryDirty:                row[10].Value,
+				BrandDirty:                   row[11].Value,
 				Description:                  row[12].Value,
-				Sku:                          row[13].Value,
+				Sku:                          strings.ToUpper(eraseAllSpace(row[13].Value)),
 				StartTimeTroubleshoot: row[14].Value,
 				EndTimeTroubleshoot:   row[15].Value,
 				IDSupplier:            row[17].Value,
 				IDInboundIssue:        row[18].Value,
+				DurationTroubleshoot:  int(EndTimeTroubleshootP.Sub(StartTimeTroubleshootP)),
 			})
 	}
 
@@ -59,7 +66,7 @@ func FetchGsheetByID(spreadsheetID string, sheetID uint) *spreadsheet.Sheet {
 	return gsheet
 }
 
-// UpdateInvalidRowSheet writes sellerDisciplineTableInvalidRow incl. Err column into a gsheet
+// UpdateInvalidRowSheet writes IDInboundIssue and Err column of sellerDisciplineTableInvalidRow into a gsheet
 func UpdateInvalidRowSheet(gsheet *spreadsheet.Sheet, sellerDisciplineTableInvalidRow []sellerdisciplinerow.SellerDisciplineRow) {
 
 	// erase all previous data from gsheet CAREFUL!
@@ -85,6 +92,15 @@ func UpdateInvalidRowSheet(gsheet *spreadsheet.Sheet, sellerDisciplineTableInval
 	err = gsheet.Synchronize()
 	checkError(err)
 
+}
+
+func eraseAllSpace(str string) string {
+	return strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) {
+			return -1
+		}
+		return r
+	}, str)
 }
 
 func checkError(err error) {

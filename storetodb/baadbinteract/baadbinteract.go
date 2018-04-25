@@ -49,8 +49,8 @@ func LoadSellerDisciplineTableValidRowToBaaDb(sellerDisciplineTableValidRow []se
 		,comment 
 		,email_address 
 		,supplier_name 
-		,category 
-		,brand 
+		,category_dirty
+		,brand_dirty
 		,description 
 		,sku 
 		,start_time_troubleshoot
@@ -85,8 +85,8 @@ func LoadSellerDisciplineTableValidRowToBaaDb(sellerDisciplineTableValidRow []se
 			sellerDisciplineTableValidRow[i].Comment,
 			sellerDisciplineTableValidRow[i].EmailAddress,
 			sellerDisciplineTableValidRow[i].SupplierName,
-			sellerDisciplineTableValidRow[i].Category,
-			sellerDisciplineTableValidRow[i].Brand,
+			sellerDisciplineTableValidRow[i].CategoryDirty,
+			sellerDisciplineTableValidRow[i].BrandDirty,
 			sellerDisciplineTableValidRow[i].Description,
 			sellerDisciplineTableValidRow[i].Sku,
 			sellerDisciplineTableValidRow[i].StartTimeTroubleshoot,
@@ -106,8 +106,8 @@ func LoadSellerDisciplineTableValidRowToBaaDb(sellerDisciplineTableValidRow []se
 					Comment:                      sellerDisciplineTableValidRow[i].Comment,
 					EmailAddress:                 sellerDisciplineTableValidRow[i].EmailAddress,
 					SupplierName:                 sellerDisciplineTableValidRow[i].SupplierName,
-					Category:                     sellerDisciplineTableValidRow[i].Category,
-					Brand:                        sellerDisciplineTableValidRow[i].Brand,
+					CategoryDirty:                sellerDisciplineTableValidRow[i].CategoryDirty,
+					BrandDirty:                   sellerDisciplineTableValidRow[i].BrandDirty,
 					Description:                  sellerDisciplineTableValidRow[i].Description,
 					Sku:                          sellerDisciplineTableValidRow[i].Sku,
 					StartTimeTroubleshoot: sellerDisciplineTableValidRow[i].StartTimeTroubleshoot,

@@ -3,11 +3,15 @@ package createvalidation
 import (
 	"database/sql"
 	"log"
+	"time"
 
 	// MySQL driver
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/thomas-bamilo/dbconf"
+	// SQL Server driver
+	_ "github.com/denisenkom/go-mssqldb"
+	spreadsheet "gopkg.in/Iwark/spreadsheet.v2"
 )
+
 
 // IDSupplierRow represents a row of the table iDSupplierTable which records: "supplier_id" and "supplier_name" of each supplier which sold something in the past 3 months
 type IDSupplierRow struct {
@@ -15,63 +19,11 @@ type IDSupplierRow struct {
 	SupplierName string `json:"supplier_name"`
 }
 
-// BrandRow represents a row of the table brandTable which records all the SKUs sold in the past 2 months
-type BrandRow struct {
-	Brand string `json:"brand"`
-}
 
-// ConnectToOms returns a MySQL database connection to oms_live_ir
-func ConnectToOms() *sql.DB {
-
-	// fetch database configuration
-	var dbConf dbconf.DbConf
-	dbConf.ReadYamlDbConf()
-	// create connection string
-	connStr := dbConf.OmsUser + ":" + dbConf.OmsPw + "@tcp(" + dbConf.OmsHost + ")/" + dbConf.OmsDb
-
-	// connect to database
-	db, err := sql.Open("mysql", connStr)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// test connection with ping
-	err = db.Ping()
-	if err != nil {
-		log.Println("Connection failed")
-		log.Fatal(err)
-	} else {
-		log.Println("Connection successful!")
-	}
-
-	return db
-}
-
-// ConnectToBob returns a MySQL database connection to bob_live_ir
-func ConnectToBob() *sql.DB {
-
-	// fetch database configuration
-	var dbConf dbconf.DbConf
-	dbConf.ReadYamlDbConf()
-	// create connection string
-	connStr := dbConf.BobUser + ":" + dbConf.BobPw + "@tcp(" + dbConf.BobHost + ")/" + dbConf.BobDb
-
-	// connect to database
-	db, err := sql.Open("mysql", connStr)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// test connection with ping
-	err = db.Ping()
-	if err != nil {
-		log.Println("Connection failed")
-		log.Fatal(err)
-	} else {
-		log.Println("Connection successful!")
-	}
-
-	return db
+// EmailRow represents a row of the table userTable which records all the OMS users' emails and id_user
+type EmailRow struct {
+	Email   string `json:"email"`
+	IDEmail string `json:"id_email"`
 }
 
 // QueryIDSupplierTable queries oms_database to create an array of IDSupplierRow which represents IDSupplierTable, the table which records:
@@ -99,9 +51,7 @@ func QueryIDSupplierTable(db *sql.DB) []IDSupplierRow {
 
 	for rows.Next() {
 		err := rows.Scan(&iDSupplier, &supplierName)
-		if err != nil {
-			log.Fatal(err)
-		}
+		checkError(err)
 		iDSupplierTable = append(iDSupplierTable,
 			IDSupplierRow{
 				IDSupplier:   iDSupplier,
@@ -111,38 +61,110 @@ func QueryIDSupplierTable(db *sql.DB) []IDSupplierRow {
 	return iDSupplierTable
 }
 
-// QueryBrandTable queries all the brands which have been ordered in the past 2 months
-func QueryBrandTable(db *sql.DB) []BrandRow {
-	// store brandQuery in a string
-	brandQuery := `SELECT DISTINCT
-  
-		cb.name_en
-	
-		FROM sales_order_item soi
-		LEFT JOIN catalog_simple cs
-		ON soi.sku = cs.sku
-		LEFT JOIN catalog_config cc
-	  	ON cc.id_catalog_config = cs.fk_catalog_config
-		LEFT JOIN catalog_brand cb
-		ON cb.id_catalog_brand = cc.fk_catalog_brand
-		
-		WHERE soi.created_at >= DATE_SUB(NOW(), INTERVAL 3 MONTH)`
+// EmailToBaa fetches all the emails from the sheet: https://goo.gl/o26ubW, uses uniqueEmail function to only keep unique emails and upload it to baa database
+func EmailToBaa(spreadsheet spreadsheet.Spreadsheet, dbBaa *sql.DB) {
 
-	// write brandQuery result to an array of BrandRow, this array of rows represents brandTable
-	var brand string
-	var brandTable []BrandRow
+	gsheet, err := spreadsheet.SheetByID(199289760)
+	checkError(err)
 
-	rows, _ := db.Query(brandQuery)
+	var emailTable []EmailRow
 
-	for rows.Next() {
-		err := rows.Scan(&brand)
-		if err != nil {
-			log.Fatal(err)
-		}
-		brandTable = append(brandTable,
-			BrandRow{
-				Brand: brand})
+	for _, row := range gsheet.Rows[1:] {
+
+		emailTable = append(emailTable,
+			EmailRow{
+				Email: row[7].Value,
+			})
 	}
 
-	return brandTable
+	uniqueEmailTable := uniqueEmail(emailTable)
+
+	oldEmailTable := BaaToEmailTable(dbBaa)
+
+	newEmailTable := newEmail(oldEmailTable, uniqueEmailTable)
+
+	// prepare statement to insert values into inbound_issue table
+	insertEmailTableStr := `INSERT INTO baa_application.baa_application_schema.inbound_issue_email (email) 
+	VALUES (@p1)`
+	insertEmailTable, err := dbBaa.Prepare(insertEmailTableStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for i := 0; i < len(newEmailTable); i++ {
+		_, err = insertEmailTable.Exec(
+			newEmailTable[i].Email,
+		)
+		if err != nil {
+
+			log.Println(err.Error())
+		}
+		time.Sleep(1 * time.Millisecond)
+	}
+}
+
+// takes an array of EmailRow and returns an array of unique EmailRow
+func uniqueEmail(emailTable []EmailRow) []EmailRow {
+	uniqueEmailTable := make([]EmailRow, 0, len(emailTable))
+	uniqueEmailMap := make(map[EmailRow]bool)
+
+	for _, emailRow := range emailTable {
+		if _, ok := uniqueEmailMap[emailRow]; !ok {
+			uniqueEmailMap[emailRow] = true
+			uniqueEmailTable = append(uniqueEmailTable, emailRow)
+		}
+	}
+
+	return uniqueEmailTable
+}
+
+// takes two arrays of UNIQUE EmailRow and only returns non-matching EmailRow ie only returns new EmailRow into an array of EmailRow: newEmailTable
+func newEmail(oldEmailTable, emailTable []EmailRow) (newEmailTable []EmailRow) {
+
+	// initialize oldEmailMap with oldEmailRow
+	oldEmailMap := make(map[string]bool)
+	for _, oldEmail := range oldEmailTable {
+		oldEmailMap[oldEmail.Email] = true
+	}
+
+	// check if any EmailRow from emailTable is not in oldEmailMap - if not, add the EmailRow to newEmailTable
+	for _, emailRow := range emailTable {
+		if _, ok := oldEmailMap[emailRow.Email]; !ok {
+			newEmailTable = append(newEmailTable, emailRow)
+		}
+
+	}
+	return newEmailTable
+}
+
+// BaaToEmailTable queries baa_application.inbound_issue_email and store the table into an array of EmailRow
+func BaaToEmailTable(dbBaa *sql.DB) []EmailRow {
+
+	// store the query in a string
+	query := `SELECT iie.email, iie.id_email FROM baa_application.baa_application_schema.inbound_issue_email iie`
+
+	var email, iDEmail string
+	var emailTable []EmailRow
+
+	rows, err := dbBaa.Query(query)
+	checkError(err)
+
+	for rows.Next() {
+		err := rows.Scan(&email, &iDEmail)
+		checkError(err)
+		emailTable = append(emailTable,
+			EmailRow{
+				Email:   email,
+				IDEmail: iDEmail,
+			})
+	}
+
+	return emailTable
+
+}
+
+func checkError(err error) {
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }

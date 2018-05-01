@@ -6,46 +6,16 @@ import (
 
 	// SQL Server driver
 	_ "github.com/denisenkom/go-mssqldb"
-	"github.com/thomas-bamilo/dbconf"
+
+	"github.com/thomas-bamilo/operationsellerscoring/supplierscorerow"
 )
 
-// TtrRfcRow represents a row of the table which records: "time to respond" and "return from customer score" for each seller on a year_month basis
-type TtrRfcRow struct {
-	YearMonth    string `json:"year_month"`
-	SupplierName string `json:"supplier_name"`
-	IDSupplier   string `json:"id_supplier"`
-	AvgTtrDay    string `json:"avg_ttr_day"`
-	RfcScore     string `json:"rfc_score"`
-}
-
-// CreateTtrRfcTable queries bi_database to create an array of TtrRfcRow which represent TtrRfcTable, the table which records: "time to respond" and "return from customer score" for each seller on a year_month basis
-func CreateTtrRfcTable() []TtrRfcRow {
-
-	// fetch database configuration
-	var dbConf dbconf.DbConf
-	dbConf.ReadYamlDbConf()
-	// create connection string
-	connStr := `sqlserver://` + dbConf.BiUser + ":" + dbConf.BiPw + "@" + dbConf.BiHost + "/" + dbConf.BiDb
-
-	// connect to database
-	db, err := sql.Open("sqlserver", connStr)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	// test connection with ping
-	err = db.Ping()
-	if err != nil {
-		log.Println("Connection failed")
-		log.Fatal(err)
-	} else {
-		log.Println("Connection successful!")
-	}
+// CreateTtrRfcTable queries bi_database to create an array of supplierscorerow.SupplierScoreRow which represent TtrRfcTable, the table which records:
+// "time to respond" and "return from customer score" for each seller on a year_month basis
+func CreateTtrRfcTable(db *sql.DB) []supplierscorerow.SupplierScoreRow {
 
 	// store the query in a string
-	query := `
-	SELECT
+	query := `SELECT
 		  CONCAT(
 	  CASE WHEN MONTH(GETDATE()) = 1 
 	  THEN YEAR(GETDATE())-1 
@@ -66,9 +36,9 @@ func CreateTtrRfcTable() []TtrRfcRow {
 	  ,sc.id_supplier
 	  ,(AVG(DATEDIFF(HOUR,si.sourcing_at,si.crossdocking_po_ordered_at)) - 48)/24.000 'avg_ttr_day'
 	  
-	  FROM tblSalesItem si
+	  FROM StagingDB_Replica.Gathering.tblSalesItem si
 	
-	  LEFT JOIN tblSupplierCatalog sc
+	  LEFT JOIN StagingDB_Replica.Gathering.tblSupplierCatalog sc
 	  ON sc.id_supplier = si.fk_supplier
 	
 	  WHERE si.sourcing_at IS NOT NULL
@@ -114,9 +84,9 @@ func CreateTtrRfcTable() []TtrRfcRow {
 	  )  / CAST(COUNT(si.return_reason) AS FLOAT) 'rfc_score'
 	 
 	  
-	FROM tblSalesItem si
+	FROM StagingDB_Replica.Gathering.tblSalesItem si
 	
-	LEFT JOIN tblSupplierCatalog sc
+	LEFT JOIN StagingDB_Replica.Gathering.tblSupplierCatalog sc
 	  ON sc.id_supplier = si.fk_supplier
 	
 	  WHERE si.return_reason IN (
@@ -141,19 +111,19 @@ func CreateTtrRfcTable() []TtrRfcRow {
 	
 	  ON rfc.id_supplier = ttr.id_supplier`
 
-	// write query result to an array of TtrRfcRow, this array of rows represents ttrRfcTable
-	var yearMonth, supplierName, iDSupplier, avgTtrDay, rfcScore string
-	var ttrRfcTable []TtrRfcRow
+	// write query result to an array of supplierscorerow.SupplierScoreRow, this array of rows represents ttrRfcTable
+	var yearMonth, supplierName, iDSupplier string
+	var avgTtrDay, rfcScore float32
+	var ttrRfcTable []supplierscorerow.SupplierScoreRow
 
-	rows, _ := db.Query(query)
+	rows, err := db.Query(query)
+	checkError(err)
 
 	for rows.Next() {
 		err := rows.Scan(&yearMonth, &supplierName, &iDSupplier, &avgTtrDay, &rfcScore)
-		if err != nil {
-			log.Fatal(err)
-		}
+		checkError(err)
 		ttrRfcTable = append(ttrRfcTable,
-			TtrRfcRow{
+			supplierscorerow.SupplierScoreRow{
 				YearMonth:    yearMonth,
 				SupplierName: supplierName,
 				IDSupplier:   iDSupplier,
@@ -162,4 +132,10 @@ func CreateTtrRfcTable() []TtrRfcRow {
 	}
 
 	return ttrRfcTable
+}
+
+func checkError(err error) {
+	if err != nil {
+		log.Fatal(err.Error())
+	}
 }

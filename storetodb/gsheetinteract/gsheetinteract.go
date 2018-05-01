@@ -1,23 +1,27 @@
 package gsheetinteract
 
 import (
+	"database/sql"
 	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
 
-	"github.com/thomas-bamilo/operationsellerscoring/sellerdisciplinerow"
+	"github.com/thomas-bamilo/operationsellerscoring/inboundissuerow"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"gopkg.in/Iwark/spreadsheet.v2"
+
+	"github.com/thomas-bamilo/operationsellerscoring/storetodb/baadbinteract"
 )
 
-// CreateSellerDisciplineTable fetches data from a gsheet to create an array of SellerDisciplineRow which represents sellerDisciplineTable, the table which records:
-// "timestamp", "item_issue_inbound_failed_reason", "email_address", "original_seller_found_yes_no" and "id_supplier" of the issues raised by Inbound Troubleshooting team (Warehouse)
-func CreateSellerDisciplineTable(gsheet *spreadsheet.Sheet) []sellerdisciplinerow.SellerDisciplineRow {
+// CreateInboundIssueTable fetches data from a gsheet to create an array of InboundIssueRow which represents inboundIssueTable, the table which records:
+// "timestamp", "item_issue_inbound_failed_reason", "email_address", "original_seller_found_yes_no" and "fk_supplier" of the issues raised by Inbound Troubleshooting team (Warehouse)
+// - uses functions baadbinteract.GetIDInboundFromBaa and newInboundIssue to return only the rows which are not already in baa database
+func CreateInboundIssueTable(db *sql.DB, gsheet *spreadsheet.Sheet) []inboundissuerow.InboundIssueRow {
 
-	var sellerDisciplineTable []sellerdisciplinerow.SellerDisciplineRow
+	var inboundIssueTable []inboundissuerow.InboundIssueRow
 
 	for _, row := range gsheet.Rows[1:] {
 
@@ -25,8 +29,8 @@ func CreateSellerDisciplineTable(gsheet *spreadsheet.Sheet) []sellerdisciplinero
 		EndTimeTroubleshootP, _ := time.Parse(row[15].Value, "1/2/2006 15:04:05")
 		NumberOfItemInt, _ := strconv.Atoi(row[16].Value)
 
-		sellerDisciplineTable = append(sellerDisciplineTable,
-			sellerdisciplinerow.SellerDisciplineRow{
+		inboundIssueTable = append(inboundIssueTable,
+			inboundissuerow.InboundIssueRow{
 				Timestamp:                    row[0].Value,
 				PoNumber:                     strings.ToUpper(eraseAllSpace(row[2].Value)),
 				OrderNumber:                  eraseAllSpace(row[3].Value),
@@ -41,13 +45,37 @@ func CreateSellerDisciplineTable(gsheet *spreadsheet.Sheet) []sellerdisciplinero
 				StartTimeTroubleshoot: row[14].Value,
 				EndTimeTroubleshoot:   row[15].Value,
 				NumberOfItem:          NumberOfItemInt,
-				IDSupplier:            row[17].Value,
+				FKSupplier:            row[17].Value,
 				IDInboundIssue:        row[18].Value,
+				FKEmail:               row[19].Value,
 				DurationTroubleshoot:  int(EndTimeTroubleshootP.Sub(StartTimeTroubleshootP)),
 			})
 	}
 
-	return sellerDisciplineTable
+	oldInboundIssueTable := baadbinteract.GetIDInboundFromBaa(db)
+
+	newInboundIssueTable := newInboundIssue(oldInboundIssueTable, inboundIssueTable)
+
+	return newInboundIssueTable
+}
+
+func newInboundIssue(oldInboundIssueTable, inboundIssueTable []inboundissuerow.InboundIssueRow) (newInboundIssueTable []inboundissuerow.InboundIssueRow) {
+
+	// initialize oldInboundIssueMap with oldInboundIssueRow
+	oldInboundIssueMap := make(map[string]bool)
+	for _, oldInboundIssueRow := range oldInboundIssueTable {
+		oldInboundIssueMap[oldInboundIssueRow.IDInboundIssue] = true
+	}
+
+	// check if any EmailRow from inboundIssueTable is not in oldInboundIssueMap - if not, add the EmailRow to newInboundIssueTable
+	for _, oldInboundIssueRow := range inboundIssueTable {
+		if _, ok := oldInboundIssueMap[oldInboundIssueRow.IDInboundIssue]; !ok {
+			newInboundIssueTable = append(newInboundIssueTable, oldInboundIssueRow)
+		}
+
+	}
+	return newInboundIssueTable
+
 }
 
 // FetchGsheetByID fetches the gsheet of a google spreadsheet given its spreadsheetID and sheetID
@@ -67,8 +95,8 @@ func FetchGsheetByID(spreadsheetID string, sheetID uint) *spreadsheet.Sheet {
 	return gsheet
 }
 
-// UpdateInvalidRowSheet writes IDInboundIssue and Err column of sellerDisciplineTableInvalidRow into a gsheet
-func UpdateInvalidRowSheet(gsheet *spreadsheet.Sheet, sellerDisciplineTableInvalidRow []sellerdisciplinerow.SellerDisciplineRow) {
+// UpdateInvalidRowSheet writes IDInboundIssue and Err column of inboundIssueTableInvalidRow into a gsheet
+func UpdateInvalidRowSheet(gsheet *spreadsheet.Sheet, inboundIssueTableInvalidRow []inboundissuerow.InboundIssueRow) {
 
 	// erase all previous data from gsheet CAREFUL!
 	for _, row := range gsheet.Rows {
@@ -80,13 +108,13 @@ func UpdateInvalidRowSheet(gsheet *spreadsheet.Sheet, sellerDisciplineTableInval
 	err := gsheet.Synchronize()
 	checkError(err)
 
-	// update gsheet with sellerDisciplineTableWrongSupplierName
+	// update gsheet with inboundIssueTableWrongSupplierName
 	gsheet.Update(0, 0, "id_inbound_issue")
 	gsheet.Update(0, 1, "error")
 
-	for i := 0; i < len(sellerDisciplineTableInvalidRow); i++ {
-		gsheet.Update(i+1, 0, sellerDisciplineTableInvalidRow[i].IDInboundIssue)
-		gsheet.Update(i+1, 1, sellerDisciplineTableInvalidRow[i].Err)
+	for i := 0; i < len(inboundIssueTableInvalidRow); i++ {
+		gsheet.Update(i+1, 0, inboundIssueTableInvalidRow[i].IDInboundIssue)
+		gsheet.Update(i+1, 1, inboundIssueTableInvalidRow[i].Err)
 	}
 
 	// Make sure call Synchronize to reflect the changes

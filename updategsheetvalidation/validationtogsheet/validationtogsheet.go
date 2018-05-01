@@ -10,6 +10,7 @@ import (
 	"gopkg.in/Iwark/spreadsheet.v2"
 )
 
+
 // GetSpreadsheet returns a Spreadsheet object representing this Google spreadsheet: https://goo.gl/7FCRvp
 func GetSpreadsheet(spreadsheetID string) spreadsheet.Spreadsheet {
 
@@ -26,6 +27,7 @@ func GetSpreadsheet(spreadsheetID string) spreadsheet.Spreadsheet {
 	return spreadsheet
 
 }
+
 
 // IDSupplierValidationToGsheet retrieves omsIDSupplierTable from oms_database and writes it to https://goo.gl/PRgBcy
 func IDSupplierValidationToGsheet(db *sql.DB, spreadsheet spreadsheet.Spreadsheet) {
@@ -48,7 +50,7 @@ func IDSupplierValidationToGsheet(db *sql.DB, spreadsheet spreadsheet.Spreadshee
 
 	// update ggsheet with omsIDSupplierTable
 	gsheet.Update(0, 0, "supplier_name")
-	gsheet.Update(0, 1, "supplier_id")
+	gsheet.Update(0, 1, "id_supplier")
 	for i := 0; i < len(omsIDSupplierTable); i++ {
 		gsheet.Update(i+1, 0, omsIDSupplierTable[i].SupplierName)
 		gsheet.Update(i+1, 1, omsIDSupplierTable[i].IDSupplier)
@@ -61,10 +63,10 @@ func IDSupplierValidationToGsheet(db *sql.DB, spreadsheet spreadsheet.Spreadshee
 
 }
 
-// BrandValidationToGsheet retrieves bobBrandTable from oms_database and writes it to https://goo.gl/vgntMR
-func BrandValidationToGsheet(db *sql.DB, spreadsheet spreadsheet.Spreadsheet) {
+// EmailValidationToGsheet retrieves omsIDSupplierTable from oms_database and writes it to https://goo.gl/PRgBcy
+func EmailValidationToGsheet(emailTable []createvalidation.EmailRow, spreadsheet spreadsheet.Spreadsheet) {
 
-	gsheet, err := spreadsheet.SheetByID(1512513973)
+	gsheet, err := spreadsheet.SheetByID(1898441539)
 	checkError(err)
 
 	// erase all previous data from gsheet CAREFUL!
@@ -77,13 +79,12 @@ func BrandValidationToGsheet(db *sql.DB, spreadsheet spreadsheet.Spreadsheet) {
 	err = gsheet.Synchronize()
 	checkError(err)
 
-	// create bobBrandTable
-	bobBrandTable := createvalidation.QueryBrandTable(db)
-
-	// update ggsheet with bobBrandTable
-	gsheet.Update(0, 0, "brand")
-	for i := 0; i < len(bobBrandTable); i++ {
-		gsheet.Update(i+1, 0, bobBrandTable[i].Brand)
+	// update ggsheet with omsIDSupplierTable
+	gsheet.Update(0, 0, "email")
+	gsheet.Update(0, 1, "id_email")
+	for i := 0; i < len(emailTable); i++ {
+		gsheet.Update(i+1, 0, emailTable[i].Email)
+		gsheet.Update(i+1, 1, emailTable[i].IDEmail)
 
 	}
 

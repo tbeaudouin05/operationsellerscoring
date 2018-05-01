@@ -1,7 +1,6 @@
 package validationtogsheet
 
 import (
-	"database/sql"
 	"io/ioutil"
 
 	"github.com/thomas-bamilo/operationsellerscoring/updategsheetvalidation/createvalidation"
@@ -10,9 +9,8 @@ import (
 	"gopkg.in/Iwark/spreadsheet.v2"
 )
 
-
-// GetSpreadsheet returns a Spreadsheet object representing this Google spreadsheet: https://goo.gl/7FCRvp
-func GetSpreadsheet(spreadsheetID string) spreadsheet.Spreadsheet {
+// GetGsheet returns a gsheet object according to spreadsheetID and sheetID
+func GetGsheet(spreadsheetID string, sheetID uint) *spreadsheet.Sheet {
 
 	data, err := ioutil.ReadFile("client_secret.json")
 	checkError(err)
@@ -24,16 +22,15 @@ func GetSpreadsheet(spreadsheetID string) spreadsheet.Spreadsheet {
 	spreadsheet, err := service.FetchSpreadsheet(spreadsheetID)
 	checkError(err)
 
-	return spreadsheet
+	gsheet, err := spreadsheet.SheetByID(sheetID)
+	checkError(err)
+
+	return gsheet
 
 }
 
-
-// IDSupplierValidationToGsheet retrieves omsIDSupplierTable from oms_database and writes it to https://goo.gl/PRgBcy
-func IDSupplierValidationToGsheet(db *sql.DB, spreadsheet spreadsheet.Spreadsheet) {
-
-	gsheet, err := spreadsheet.SheetByID(1001607611)
-	checkError(err)
+// IDSupplierValidationToGsheet retrieves omsIDSupplierTable from oms_database and writes it to spreadsheet>idSheet
+func IDSupplierValidationToGsheet(omsIDSupplierTable []createvalidation.IDSupplierRow, gsheet *spreadsheet.Sheet) {
 
 	// erase all previous data from gsheet CAREFUL!
 	for _, row := range gsheet.Rows {
@@ -42,11 +39,8 @@ func IDSupplierValidationToGsheet(db *sql.DB, spreadsheet spreadsheet.Spreadshee
 		}
 	}
 	// Make sure call Synchronize to reflect the changes
-	err = gsheet.Synchronize()
+	err := gsheet.Synchronize()
 	checkError(err)
-
-	// create omsSupplierIDTable
-	omsIDSupplierTable := createvalidation.QueryIDSupplierTable(db)
 
 	// update ggsheet with omsIDSupplierTable
 	gsheet.Update(0, 0, "supplier_name")
@@ -64,10 +58,7 @@ func IDSupplierValidationToGsheet(db *sql.DB, spreadsheet spreadsheet.Spreadshee
 }
 
 // EmailValidationToGsheet retrieves omsIDSupplierTable from oms_database and writes it to https://goo.gl/PRgBcy
-func EmailValidationToGsheet(emailTable []createvalidation.EmailRow, spreadsheet spreadsheet.Spreadsheet) {
-
-	gsheet, err := spreadsheet.SheetByID(1898441539)
-	checkError(err)
+func EmailValidationToGsheet(emailTable []createvalidation.EmailRow, gsheet *spreadsheet.Sheet) {
 
 	// erase all previous data from gsheet CAREFUL!
 	for _, row := range gsheet.Rows {
@@ -76,7 +67,7 @@ func EmailValidationToGsheet(emailTable []createvalidation.EmailRow, spreadsheet
 		}
 	}
 	// Make sure call Synchronize to reflect the changes
-	err = gsheet.Synchronize()
+	err := gsheet.Synchronize()
 	checkError(err)
 
 	// update ggsheet with omsIDSupplierTable

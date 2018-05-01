@@ -6,6 +6,7 @@ import (
 
 	"github.com/thomas-bamilo/operationsellerscoring/connectdb"
 	"github.com/thomas-bamilo/operationsellerscoring/inboundissuerow"
+	"github.com/thomas-bamilo/operationsellerscoring/sellerrejectionrow"
 	"github.com/thomas-bamilo/operationsellerscoring/storetodb/baadbinteract"
 	"github.com/thomas-bamilo/operationsellerscoring/storetodb/gsheetinteract"
 )
@@ -20,22 +21,28 @@ func main() {
 	defer f.Close()
 	log.SetOutput(f)
 
-	sellerDisciplineResponseSheet := gsheetinteract.FetchGsheetByID("1wDTaZVLmos6-B79626H1531_JMgo1b5nBDKJP7NwsPU", 199289760)
+	log.Println("Connecting to necessary gsheets")
+	inboundIssueResponseSheet := gsheetinteract.FetchGsheetByID("1wDTaZVLmos6-B79626H1531_JMgo1b5nBDKJP7NwsPU", 199289760)
+	inboundIssueInvalidRowSheet := gsheetinteract.FetchGsheetByID("1wDTaZVLmos6-B79626H1531_JMgo1b5nBDKJP7NwsPU", 1015531072)
+	sellerRejectionResponseSheet := gsheetinteract.FetchGsheetByID("12zINw_v3OSirIDjKGheU07G8kBfNgWStG8kVzHvRD6U", 1333014143)
+	sellerRejectionInvalidRowSheet := gsheetinteract.FetchGsheetByID("12zINw_v3OSirIDjKGheU07G8kBfNgWStG8kVzHvRD6U", 1116714321)
 
-	log.Println("Fetching data from Inbound Issue response sheet")
+	log.Println("Fetching data from Inbound Issue & Seller Rejection response sheet")
 	dbBaa := connectdb.ConnectToBaa()
 	defer dbBaa.Close()
-	InboundIssueTable := gsheetinteract.CreateInboundIssueTable(dbBaa, sellerDisciplineResponseSheet)
+	InboundIssueTable := gsheetinteract.CreateInboundIssueTable(dbBaa, inboundIssueResponseSheet)
+	SellerRejectionTable := gsheetinteract.CreateSellerRejectionTable(dbBaa, sellerRejectionResponseSheet)
 
-	log.Println("Filter response sheet for valid vs. invalid rows")
+	log.Println("Filter response sheets for valid vs. invalid rows")
 	InboundIssueTableValidRow, InboundIssueTableInvalidRow := inboundissuerow.FilterInboundIssueTable(InboundIssueTable)
+	SellerRejectionTableValidRow, SellerRejectionTableInvalidRow := sellerrejectionrow.FilterSellerRejectionTable(SellerRejectionTable)
 
-	sellerDisciplineInvalidRowSheet := gsheetinteract.FetchGsheetByID("1wDTaZVLmos6-B79626H1531_JMgo1b5nBDKJP7NwsPU", 1015531072)
+	log.Println("Update invalid row Gsheets")
+	gsheetinteract.UpdateInboundIssueInvalidRowSheet(inboundIssueInvalidRowSheet, InboundIssueTableInvalidRow)
+	gsheetinteract.UpdateSellerRejectionInvalidRowSheet(sellerRejectionInvalidRowSheet, SellerRejectionTableInvalidRow)
 
-	log.Println("Update invalid row Google sheet")
-	gsheetinteract.UpdateInvalidRowSheet(sellerDisciplineInvalidRowSheet, InboundIssueTableInvalidRow)
-
-	log.Println("Load InboundIssueTableValidRow to BAA database")
+	log.Println("Load InboundIssueTableValidRow and SellerRejectionTableValidRow to BAA database")
 	baadbinteract.LoadInboundIssueTableValidRowToBaaDb(dbBaa, InboundIssueTableValidRow)
+	baadbinteract.LoadSellerRejectionTableValidRowToBaaDb(dbBaa, SellerRejectionTableValidRow)
 
 }

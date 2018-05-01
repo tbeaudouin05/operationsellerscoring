@@ -12,13 +12,11 @@ import (
 	spreadsheet "gopkg.in/Iwark/spreadsheet.v2"
 )
 
-
 // IDSupplierRow represents a row of the table iDSupplierTable which records: "supplier_id" and "supplier_name" of each supplier which sold something in the past 3 months
 type IDSupplierRow struct {
 	IDSupplier   string `json:"supplier_id"`
 	SupplierName string `json:"supplier_name"`
 }
-
 
 // EmailRow represents a row of the table userTable which records all the OMS users' emails and id_user
 type EmailRow struct {
@@ -62,10 +60,7 @@ func QueryIDSupplierTable(db *sql.DB) []IDSupplierRow {
 }
 
 // EmailToBaa fetches all the emails from the sheet: https://goo.gl/o26ubW, uses uniqueEmail function to only keep unique emails and upload it to baa database
-func EmailToBaa(spreadsheet spreadsheet.Spreadsheet, dbBaa *sql.DB) {
-
-	gsheet, err := spreadsheet.SheetByID(199289760)
-	checkError(err)
+func EmailToBaa(gsheet *spreadsheet.Sheet, dbBaa *sql.DB) {
 
 	var emailTable []EmailRow
 

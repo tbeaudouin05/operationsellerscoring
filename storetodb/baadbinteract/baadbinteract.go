@@ -10,6 +10,7 @@ import (
 	// SQL Server driver
 	_ "github.com/denisenkom/go-mssqldb"
 	"github.com/thomas-bamilo/operationsellerscoring/inboundissuerow"
+	"github.com/thomas-bamilo/operationsellerscoring/sellerrejectionrow"
 	"github.com/thomas-bamilo/operationsellerscoring/supplierscorerow"
 )
 
@@ -88,7 +89,7 @@ func LoadInboundIssueTableValidRowToBaaDb(db *sql.DB, inboundIssueTableValidRow 
 	}
 
 	// to write csvErrorLog to csv
-	file, err := os.OpenFile("csvErrorLog.csv", os.O_RDWR|os.O_CREATE, os.ModePerm)
+	file, err := os.OpenFile("InboundIssueErrorLog.csv", os.O_RDWR|os.O_CREATE, os.ModePerm)
 	checkError(err)
 	defer file.Close()
 
@@ -97,8 +98,89 @@ func LoadInboundIssueTableValidRowToBaaDb(db *sql.DB, inboundIssueTableValidRow 
 
 }
 
-// GetIDInboundFromBaa gets all the existing id_inbound_issue from baa_application.baa_application_schema.inbound_issue and store then into an array of inboundissuerow.InboundIssueRow
-func GetIDInboundFromBaa(db *sql.DB) []inboundissuerow.InboundIssueRow {
+// LoadSellerRejectionTableValidRowToBaaDb loads SellerRejectionTableValidRow to baa database
+func LoadSellerRejectionTableValidRowToBaaDb(db *sql.DB, sellerRejectionTableValidRow []sellerrejectionrow.SellerRejectionRow) {
+
+	// prepare statement to insert values into seller_rejection table
+	insertSellerRejectionTableStr := `INSERT INTO baa_application.baa_application_schema.seller_rejection (
+		id_seller_rejection
+		,timestamp 
+		,item_uid
+		,rs_return_order_number
+		,shipping_to_seller_date
+		,rfc_return_from_customer_reason
+		,rts_seller_rejection_reason
+		,rts_seller_rejection_desc
+		,item_unit_price
+		,supplier_name
+		,customer_order_number
+		,location_section
+		,seller_rejection_approved_yes_no
+		,approval_rejection_desc
+		,fk_supplier) 
+	VALUES (@p1,@p2,@p3,@p4,@p5,@p6,@p7,@p8,@p9,@p10,@p11,@p12,@p13,@p14,@p15)`
+	insertSellerRejectionTable, err := db.Prepare(insertSellerRejectionTableStr)
+	checkError(err)
+
+	csvErrorLogP := []*sellerrejectionrow.SellerRejectionRow{}
+
+	// write sellerRejectionTableValidRow into seller_rejection table
+	// and write csvErrorLog to csvErrorLog.csv
+	// csvErrorLog should not contain any data - all data validation should already been taken care of by the application
+	for i := 0; i < len(sellerRejectionTableValidRow); i++ {
+		log.Println("row number " + string(i))
+		_, err = insertSellerRejectionTable.Exec(
+			sellerRejectionTableValidRow[i].IDSellerRejection,
+			sellerRejectionTableValidRow[i].Timestamp,
+			sellerRejectionTableValidRow[i].ItemUID,
+			sellerRejectionTableValidRow[i].RsReturnOrderNumber,
+			sellerRejectionTableValidRow[i].ShippingToSellerDate,
+			sellerRejectionTableValidRow[i].RfcReturnFromCustomerReason,
+			sellerRejectionTableValidRow[i].RtsSellerRejectionReason,
+			sellerRejectionTableValidRow[i].RtsSellerRejectionDesc,
+			sellerRejectionTableValidRow[i].ItemUnitPrice,
+			sellerRejectionTableValidRow[i].SupplierName,
+			sellerRejectionTableValidRow[i].CustomerOrderNumber,
+			sellerRejectionTableValidRow[i].LocationSection,
+			sellerRejectionTableValidRow[i].SellerRejectionApprovedYesNo,
+			sellerRejectionTableValidRow[i].ApprovalRejectionDesc,
+			sellerRejectionTableValidRow[i].FKSupplier,
+		)
+		if err != nil {
+			csvErrorLogP = append(csvErrorLogP,
+				&sellerrejectionrow.SellerRejectionRow{
+					Err:                          string(err.Error()),
+					IDSellerRejection:            sellerRejectionTableValidRow[i].IDSellerRejection,
+					Timestamp:                    sellerRejectionTableValidRow[i].Timestamp,
+					ItemUID:                      sellerRejectionTableValidRow[i].ItemUID,
+					RsReturnOrderNumber:          sellerRejectionTableValidRow[i].RsReturnOrderNumber,
+					ShippingToSellerDate:         sellerRejectionTableValidRow[i].ShippingToSellerDate,
+					RfcReturnFromCustomerReason:  sellerRejectionTableValidRow[i].RfcReturnFromCustomerReason,
+					RtsSellerRejectionReason:     sellerRejectionTableValidRow[i].RtsSellerRejectionReason,
+					RtsSellerRejectionDesc:       sellerRejectionTableValidRow[i].RtsSellerRejectionDesc,
+					ItemUnitPrice:                sellerRejectionTableValidRow[i].ItemUnitPrice,
+					SupplierName:                 sellerRejectionTableValidRow[i].SupplierName,
+					CustomerOrderNumber:          sellerRejectionTableValidRow[i].CustomerOrderNumber,
+					LocationSection:              sellerRejectionTableValidRow[i].LocationSection,
+					SellerRejectionApprovedYesNo: sellerRejectionTableValidRow[i].SellerRejectionApprovedYesNo,
+					ApprovalRejectionDesc:        sellerRejectionTableValidRow[i].ApprovalRejectionDesc,
+					FKSupplier:                   sellerRejectionTableValidRow[i].FKSupplier})
+		}
+		time.Sleep(1 * time.Millisecond)
+	}
+
+	// to write csvErrorLog to csv
+	file, err := os.OpenFile("SellerRejectionErrorLog.csv", os.O_RDWR|os.O_CREATE, os.ModePerm)
+	checkError(err)
+	defer file.Close()
+
+	// save csvErrorLog to csv
+	err = gocsv.MarshalFile(&csvErrorLogP, file)
+
+}
+
+// GetIDInboundIssueFromBaa gets all the existing id_inbound_issue from baa_application.baa_application_schema.inbound_issue and store then into an array of inboundissuerow.InboundIssueRow
+func GetIDInboundIssueFromBaa(db *sql.DB) []inboundissuerow.InboundIssueRow {
 
 	// store iDInboundQuery in a string
 	iDInboundQuery := `SELECT ii.id_inbound_issue 
@@ -119,6 +201,30 @@ func GetIDInboundFromBaa(db *sql.DB) []inboundissuerow.InboundIssueRow {
 	}
 
 	return iDInboundIssueTable
+}
+
+// GetIDSellerRejectionFromBaa gets all the existing id_seller_rejection from baa_application.baa_application_schema.seller_rejection and store then into an array of sellerrejectionrow.SellerRejectionRow
+func GetIDSellerRejectionFromBaa(db *sql.DB) []sellerrejectionrow.SellerRejectionRow {
+
+	// store iDSellerRejectionQuery in a string
+	iDSellerRejectionQuery := `SELECT sr.id_seller_rejection 
+	FROM baa_application.baa_application_schema.seller_rejection sr`
+
+	// write iDSellerRejectionQuery result to an array of sellerrejectionrow.SellerRejectionRow, this array of rows represents iDSellerRejectionTable
+	var iDSellerRejection string
+	var iDSellerRejectionTable []sellerrejectionrow.SellerRejectionRow
+
+	rows, _ := db.Query(iDSellerRejectionQuery)
+
+	for rows.Next() {
+		err := rows.Scan(&iDSellerRejection)
+		checkError(err)
+		iDSellerRejectionTable = append(iDSellerRejectionTable,
+			sellerrejectionrow.SellerRejectionRow{
+				IDSellerRejection: iDSellerRejection})
+	}
+
+	return iDSellerRejectionTable
 }
 
 // InboundScoreTableFromBaa creates inboundScoreTable which records:

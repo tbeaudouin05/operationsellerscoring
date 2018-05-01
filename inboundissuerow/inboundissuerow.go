@@ -33,7 +33,7 @@ type InboundIssueRow struct {
 	Err                          string `json:"error"`
 }
 
-
+// define validation for each field of InboundIssueRow
 func (row InboundIssueRow) validateRowFormat() error {
 	return validation.ValidateStruct(&row,
 		// Timestamp cannot be empty, and must be a date in format 2006/01/02 15:04:05
@@ -68,8 +68,7 @@ func (row InboundIssueRow) validateRowFormat() error {
 	)
 }
 
-
-// FilterInboundIssueTable splits InboundIssueTable into InboundIssueTableWSupplierID and InboundIssueTableWrongSupplierName.
+// FilterInboundIssueTable splits InboundIssueTable into InboundIssueTableValidRow and InboundIssueTableInvalidRow
 // NB: rows with FKSupplier = "" & OriginalSellerFoundYesNo = "No" are not considered
 func FilterInboundIssueTable(inboundIssueTable []InboundIssueRow) (InboundIssueTableValidRow, InboundIssueTableInvalidRow []InboundIssueRow) {
 

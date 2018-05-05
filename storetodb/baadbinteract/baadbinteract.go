@@ -303,6 +303,87 @@ func InboundScoreTableFromBaa(db *sql.DB) []supplierscorerow.SupplierScoreRow {
 	return inboundScoreTable
 }
 
+// RtsTableFromBaa creates rtsTable which records:
+// id_supplier and rts_score for each supplier
+func RtsTableFromBaa(db *sql.DB) []supplierscorerow.SupplierScoreRow {
+
+	// store rtsTableQuery in a string
+	rtsTableQuery := `SELECT 
+	CONCAT(
+		CASE WHEN MONTH(GETDATE()) = 1 
+		THEN YEAR(GETDATE())-1 
+		ELSE YEAR(GETDATE()) END, 
+		CASE WHEN MONTH(GETDATE()) = 1 
+		THEN 12 
+		ELSE MONTH(GETDATE())-1 END
+		) 'year_month'
+	,sr.supplier_name
+	,sr.fk_supplier 'id_supplier'
+	,SUM(CASE 
+	WHEN sr.rts_seller_rejection_reason IN (
+	'Missing Part or item'
+  ,'Missing Parts/Items'
+  ,'Without Any Specific Reason'
+  ,'Wrong Return Reason'
+  ,'Not Compliant with return Policy'
+)
+	THEN 1
+	WHEN sr.rts_seller_rejection_reason IN (
+  'Damaged Item'
+  ,'Damaged Package'
+  ,'Missed 30 Days SLA'
+) 
+	THEN 2
+	WHEN sr.rts_seller_rejection_reason IN (
+  'Wrong Item'
+  ,'Other'
+)
+	THEN 3
+	ELSE 0 END) / CAST(COUNT(sr.rts_seller_rejection_reason) AS FLOAT) 'rts_score'
+	 
+	FROM  baa_application.baa_application_schema.seller_rejection sr
+  
+	WHERE sr.fk_supplier <> 0
+	
+	AND sr.rts_seller_rejection_reason IN (
+	'Missing Part or item'
+  ,'Missing Parts/Items'
+  ,'Without Any Specific Reason'
+  ,'Wrong Return Reason'
+  ,'Not Compliant with return Policy'
+  ,'Damaged Item'
+  ,'Damaged Package'
+  ,'Missed 30 Days SLA'
+  ,'Wrong Item'
+  ,'Other'
+	)
+	
+	AND MONTH(sr.timestamp) = CASE WHEN MONTH(GETDATE()) = 1 THEN 12 ELSE MONTH(GETDATE())-1 END
+	AND YEAR(sr.timestamp) = CASE WHEN MONTH(GETDATE()) = 1 THEN YEAR(GETDATE())-1 ELSE YEAR(GETDATE()) END
+  
+	GROUP BY sr.fk_supplier, sr.supplier_name`
+
+	// write rtsTableQuery result to an array of inboundissuerow.InboundIssueRow, this array of rows represents rtsTable
+	var yearMonth, supplierName, iDSupplier string
+	var rtsScore float32
+	var rtsTable []supplierscorerow.SupplierScoreRow
+
+	rows, _ := db.Query(rtsTableQuery)
+
+	for rows.Next() {
+		err := rows.Scan(&yearMonth, &supplierName, &iDSupplier, &rtsScore)
+		checkError(err)
+		rtsTable = append(rtsTable,
+			supplierscorerow.SupplierScoreRow{
+				YearMonth:    yearMonth,
+				SupplierName: supplierName,
+				IDSupplier:   iDSupplier,
+				RtsScore:     rtsScore})
+	}
+
+	return rtsTable
+}
+
 func checkError(err error) {
 	if err != nil {
 		log.Fatal(err.Error())

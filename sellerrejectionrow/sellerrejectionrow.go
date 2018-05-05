@@ -19,7 +19,7 @@ type SellerRejectionRow struct {
 	RfcReturnFromCustomerReason  string `json:"rfc_return_from_customer_reason"`
 	RtsSellerRejectionReason     string `json:"rts_seller_rejection_reason"`
 	RtsSellerRejectionDesc       string `json:"rts_seller_rejection_desc"`
-	ItemUnitPrice                string `json:"item_unit_price"`
+	ItemUnitPrice                int    `json:"item_unit_price"`
 	SupplierName                 string `json:"supplier_name"`
 	CustomerOrderNumber          string `json:"customer_order_number"`
 	LocationSection              string `json:"location_section"`
@@ -33,7 +33,7 @@ type SellerRejectionRow struct {
 // define validation for each field of SellerRejectionRow
 func (row SellerRejectionRow) validateRowFormat() error {
 	return validation.ValidateStruct(&row,
-		validation.Field(&row.Timestamp, validation.Required, validation.Date("1/2/2006")),
+		validation.Field(&row.Timestamp, validation.Required, validation.Date("1/2/2006 15:04:05")),
 		validation.Field(&row.ItemUID, validation.Required, validation.By(checkItemUID)),
 		validation.Field(&row.RsReturnOrderNumber, validation.Required, validation.By(checkRsReturnOrderNumber)),
 		validation.Field(&row.ShippingToSellerDate, validation.Required, validation.Date("1/2/2006")),
@@ -54,13 +54,12 @@ func (row SellerRejectionRow) validateRowFormat() error {
 			`Other`,
 			`Missed 30 Days SLA`,
 			`Wrong Return Reason`,
-			`Missing Part or item`,
 			`Not Compliant with return Policy`,
 		)),
 		validation.Field(&row.RtsSellerRejectionDesc, validation.Length(0, 500)),
-		validation.Field(&row.ItemUnitPrice, validation.Required, is.Int, validation.Min(0), validation.Max(1000000000)),
+		validation.Field(&row.ItemUnitPrice, validation.Required, validation.Min(0), validation.Max(1000000000)),
 		validation.Field(&row.SupplierName, validation.Required, validation.Length(1, 50)),
-		validation.Field(&row.CustomerOrderNumber, is.Int, validation.Length(9, 9)),
+		validation.Field(&row.CustomerOrderNumber, validation.Required, validation.Length(9, 9), is.Int),
 		validation.Field(&row.LocationSection, validation.Required, validation.In(
 			`Damaged`,
 			`Claim Rejected`,
@@ -71,6 +70,7 @@ func (row SellerRejectionRow) validateRowFormat() error {
 		)),
 		validation.Field(&row.SellerRejectionApprovedYesNo, validation.Required, validation.In(`Yes`, `No`)),
 		validation.Field(&row.ApprovalRejectionDesc, validation.Length(0, 500)),
+		validation.Field(&row.FKSupplier, validation.Required, is.Int, validation.Length(2, 50)),
 		validation.Field(&row.IDSellerRejection, validation.Required, validation.Length(0, 50)),
 	)
 }

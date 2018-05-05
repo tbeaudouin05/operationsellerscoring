@@ -9,17 +9,20 @@ import (
 	"github.com/thomas-bamilo/operationsellerscoring/supplierscorerow"
 )
 
-// JoinScOmsToCsv joins seller_penalty and sc_item_id tables on oms_item_number and write result to csv file in the same folder as the application
+// CreateTtrRfcInboundScoreRtsTable creates and output the ttr, rfc, inbound and rts scores of each supplier
 func CreateTtrRfcInboundScoreRtsTable(dbSQLite *sql.DB, ttrRfcTable []supplierscorerow.SupplierScoreRow, inboundScoreTable []supplierscorerow.SupplierScoreRow) {
 
 	createTtrRfcTable(dbSQLite, ttrRfcTable)
 
 	createInboundScoreTable(dbSQLite, inboundScoreTable)
 
+	createTtrRfcInboundView(dbSQLite)
+
 	joinTable(dbSQLite)
 
 }
 
+// create the SQLite table ttr_rfc with the data from ttrRfcTable, an array of SupplierScoreRow
 func createTtrRfcTable(db *sql.DB, ttrRfcTable []supplierscorerow.SupplierScoreRow) {
 
 	// create ttr_rfc table
@@ -58,6 +61,7 @@ func createTtrRfcTable(db *sql.DB, ttrRfcTable []supplierscorerow.SupplierScoreR
 
 }
 
+// create the SQLite table inbound_score with the data from inboundScoreTable, an array of SupplierScoreRow
 func createInboundScoreTable(db *sql.DB, inboundScoreTable []supplierscorerow.SupplierScoreRow) {
 
 	// create inbound_score table
@@ -94,9 +98,50 @@ func createInboundScoreTable(db *sql.DB, inboundScoreTable []supplierscorerow.Su
 
 }
 
-func joinTable(db *sql.DB) {
-	// store the query in a string
-	query := `
+// create the SQLite table rts with the data from rtsTable, an array of SupplierScoreRow
+func createRtsTable(db *sql.DB, rtsTable []supplierscorerow.SupplierScoreRow) {
+
+	// create rts table
+	createRtsTableStr := `CREATE TABLE rts (
+	year_month INTEGER
+	,supplier_name TEXT
+	,id_supplier INTEGER
+	,rts_score REAL)`
+
+	createRtsTable, err := db.Prepare(createRtsTableStr)
+	checkError(err)
+	createRtsTable.Exec()
+
+	// insert values into rts table
+	insertRtsTableStr := `INSERT INTO rts (
+	year_month
+	,supplier_name
+	,id_supplier
+	,rts_score) 
+	VALUES (?,?,?,?)`
+	insertRtsTable, err := db.Prepare(insertRtsTableStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	for i := 0; i < len(rtsTable); i++ {
+		insertRtsTable.Exec(
+			rtsTable[i].YearMonth,
+			rtsTable[i].SupplierName,
+			rtsTable[i].IDSupplier,
+			rtsTable[i].RtsScore,
+		)
+		time.Sleep(1 * time.Millisecond)
+	}
+
+}
+
+// since SQLite does not have full outer join....... we need to build it ourselves with left join + union all....
+// which requires to build intermediate views if more than two tables need to be joined :(
+func createTtrRfcInboundView(db *sql.DB) {
+
+	// create iss_tr view
+	createTtrRfcInboundViewStr := `
+	CREATE VIEW iss_tr AS
 	SELECT
 	COALESCE(tr.year_month,iss.year_month) 'year_month'
 	,COALESCE(tr.supplier_name,iss.supplier_name) 'supplier_name'
@@ -117,17 +162,49 @@ func joinTable(db *sql.DB) {
 	FROM inbound_score iss
 	LEFT JOIN ttr_rfc tr USING(id_supplier)
 	WHERE tr.year_month IS NULL`
-	
+
+	createTtrRfcInboundView, err := db.Prepare(createTtrRfcInboundViewStr)
+	checkError(err)
+	createTtrRfcInboundView.Exec()
+
+}
+
+// full outer join the SQLite tables iss_tr = TtrRfcInboundView and rts
+// and output the result into csv
+func joinTable(db *sql.DB) {
+	// store the query in a string
+	query := `
+	SELECT
+	COALESCE(iss_tr.year_month,rts.year_month) 'year_month'
+	,COALESCE(iss_tr.supplier_name,rts.supplier_name) 'supplier_name'
+	,COALESCE(iss_tr.id_supplier,rts.id_supplier) 'id_supplier'
+	,COALESCE(iss_tr.avg_ttr_day,0) 'avg_ttr_day'
+	,COALESCE(iss_tr.rfc_score,0) 'rfc_score'
+	,COALESCE(iss_tr.inbound_score,0) 'inbound_score'
+	,COALESCE(rts.rts_score,0) 'rts_score'
+   	FROM iss_tr
+   	LEFT JOIN rts USING(id_supplier)
+	   UNION ALL
+	SELECT
+	COALESCE(iss_tr.year_month,rts.year_month) 'year_month'
+	,COALESCE(iss_tr.supplier_name,rts.supplier_name) 'supplier_name'
+	,COALESCE(iss_tr.id_supplier,rts.id_supplier) 'id_supplier'
+	,COALESCE(iss_tr.avg_ttr_day,0) 'avg_ttr_day'
+	,COALESCE(iss_tr.rfc_score,0) 'rfc_score'
+	,COALESCE(iss_tr.inbound_score,0) 'inbound_score'
+	FROM rts
+	LEFT JOIN iss_tr USING(id_supplier)
+	WHERE iss_tr.year_month IS NULL`
 
 	var yearMonth, supplierName, iDSupplier string
-	var avgTtrDay, rfcScore, inboundScore float32
+	var avgTtrDay, rfcScore, inboundScore, rtsScore float32
 	var supplierScoreTable []supplierscorerow.SupplierScoreRow
 
 	rows, err := db.Query(query)
 	checkError(err)
 
 	for rows.Next() {
-		err := rows.Scan(&yearMonth, &supplierName, &iDSupplier, &avgTtrDay, &rfcScore, &inboundScore)
+		err := rows.Scan(&yearMonth, &supplierName, &iDSupplier, &avgTtrDay, &rfcScore, &inboundScore, &rtsScore)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -139,11 +216,11 @@ func joinTable(db *sql.DB) {
 				AvgTtrDay:    avgTtrDay,
 				RfcScore:     rfcScore,
 				InboundScore: inboundScore,
+				RtsScore:     rtsScore,
 			})
-			err = sqltocsv.WriteFile("supplierscore.csv", rows)
-			checkError(err)
+		err = sqltocsv.WriteFile("supplierscore.csv", rows)
+		checkError(err)
 	}
-
 
 }
 

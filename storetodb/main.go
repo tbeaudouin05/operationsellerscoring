@@ -27,10 +27,11 @@ func main() {
 	sellerRejectionResponseSheet := gsheetinteract.FetchGsheetByID("12zINw_v3OSirIDjKGheU07G8kBfNgWStG8kVzHvRD6U", 1333014143)
 	sellerRejectionInvalidRowSheet := gsheetinteract.FetchGsheetByID("12zINw_v3OSirIDjKGheU07G8kBfNgWStG8kVzHvRD6U", 1116714321)
 
-	log.Println("Fetching data from Inbound Issue & Seller Rejection response sheet")
 	dbBaa := connectdb.ConnectToBaa()
 	defer dbBaa.Close()
+	log.Println("Fetching data from Inbound Issue response sheet")
 	InboundIssueTable := gsheetinteract.CreateInboundIssueTable(dbBaa, inboundIssueResponseSheet)
+	log.Println("Fetching data from Seller Rejection response sheet")
 	SellerRejectionTable := gsheetinteract.CreateSellerRejectionTable(dbBaa, sellerRejectionResponseSheet)
 
 	log.Println("Filter response sheets for valid vs. invalid rows")

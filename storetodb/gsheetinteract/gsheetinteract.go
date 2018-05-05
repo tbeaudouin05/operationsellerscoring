@@ -3,6 +3,7 @@ package gsheetinteract
 import (
 	"database/sql"
 	"io/ioutil"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -69,17 +70,20 @@ func CreateSellerRejectionTable(db *sql.DB, gsheet *spreadsheet.Sheet) []sellerr
 
 	for _, row := range gsheet.Rows[1:] {
 
+		log.Println("Fetching next row")
+
+		itemUnitPriceInt, _ := strconv.Atoi(row[7].Value)
+
 		sellerRejectionTable = append(sellerRejectionTable,
 			sellerrejectionrow.SellerRejectionRow{
-				Timestamp:                   row[0].Value,
-				ItemUID:                     eraseAllSpace(strings.ToUpper(row[1].Value[:3]) + row[1].Value[4:]),
-				RsReturnOrderNumber:         strings.ToUpper(eraseAllSpace(row[2].Value)),
-				ShippingToSellerDate:        row[3].Value,
-				RfcReturnFromCustomerReason: row[4].Value,
-
+				Timestamp:                    row[0].Value,
+				ItemUID:                      row[1].Value,
+				RsReturnOrderNumber:          strings.ToUpper(eraseAllSpace(row[2].Value)),
+				ShippingToSellerDate:         row[3].Value,
+				RfcReturnFromCustomerReason:  row[4].Value,
 				RtsSellerRejectionReason:     row[5].Value,
 				RtsSellerRejectionDesc:       row[6].Value,
-				ItemUnitPrice:                row[7].Value,
+				ItemUnitPrice:                itemUnitPriceInt,
 				SupplierName:                 row[8].Value,
 				CustomerOrderNumber:          row[9].Value,
 				LocationSection:              row[10].Value,
@@ -118,15 +122,15 @@ func newInboundIssue(oldInboundIssueTable, inboundIssueTable []inboundissuerow.I
 
 func newSellerRejection(oldSellerRejectionTable, sellerRejectionTable []sellerrejectionrow.SellerRejectionRow) (newSellerRejectionTable []sellerrejectionrow.SellerRejectionRow) {
 
-	// initialize oldInboundIssueMap with oldSellerRejectionRow
-	oldInboundIssueMap := make(map[string]bool)
+	// initialize oldSellerRejectionMap with oldSellerRejectionRow
+	oldSellerRejectionMap := make(map[string]bool)
 	for _, oldSellerRejectionRow := range oldSellerRejectionTable {
-		oldInboundIssueMap[oldSellerRejectionRow.IDSellerRejection] = true
+		oldSellerRejectionMap[oldSellerRejectionRow.IDSellerRejection] = true
 	}
 
-	// check if any EmailRow from sellerRejectionTable is not in oldInboundIssueMap - if not, add the EmailRow to newSellerRejectionTable
+	// check if any IDSellerRejection from sellerRejectionTable is not in oldSellerRejectionMap - if not, add the IDSellerRejection to newSellerRejectionTable
 	for _, oldSellerRejectionRow := range sellerRejectionTable {
-		if _, ok := oldInboundIssueMap[oldSellerRejectionRow.IDSellerRejection]; !ok {
+		if _, ok := oldSellerRejectionMap[oldSellerRejectionRow.IDSellerRejection]; !ok {
 			newSellerRejectionTable = append(newSellerRejectionTable, oldSellerRejectionRow)
 		}
 

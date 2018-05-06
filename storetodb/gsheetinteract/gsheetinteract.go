@@ -3,7 +3,6 @@ package gsheetinteract
 import (
 	"database/sql"
 	"io/ioutil"
-	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -69,8 +68,6 @@ func CreateSellerRejectionTable(db *sql.DB, gsheet *spreadsheet.Sheet) []sellerr
 	var sellerRejectionTable []sellerrejectionrow.SellerRejectionRow
 
 	for _, row := range gsheet.Rows[1:] {
-
-		log.Println("Fetching next row")
 
 		itemUnitPriceInt, _ := strconv.Atoi(row[7].Value)
 

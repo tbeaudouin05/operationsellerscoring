@@ -1,4 +1,4 @@
-package biqueryttrrfc
+package bidbinteract
 
 import (
 	"database/sql"
@@ -7,7 +7,7 @@ import (
 	// SQL Server driver
 	_ "github.com/denisenkom/go-mssqldb"
 
-	"github.com/thomas-bamilo/operationsellerscoring/supplierscorerow"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/supplierscorerow"
 )
 
 // CreateTtrRfcTable queries bi_database to create an array of supplierscorerow.SupplierScoreRow which represent TtrRfcTable, the table which records:
@@ -132,6 +132,51 @@ func CreateTtrRfcTable(db *sql.DB) []supplierscorerow.SupplierScoreRow {
 	}
 
 	return ttrRfcTable
+}
+
+// CreateSupplierClassTable queries bi_database to create an array of supplierscorerow.SupplierScoreRow which represent supplierClassTable, the table which records:
+// "net_order" and "supplier_class" for each supplier on a year_month basis
+func CreateSupplierClassTable(db *sql.DB) []supplierscorerow.SupplierScoreRow {
+
+	// store the query in a string
+	query := `SELECT 
+	sc.id_supplier
+	,COUNT(DISTINCT si.fk_sales_order) 'net_order'
+	, CASE WHEN COUNT(DISTINCT si.fk_sales_order) = 0 
+		   THEN 'D'
+		   WHEN COUNT(DISTINCT si.fk_sales_order) <= 18 
+		   THEN 'C'
+		   WHEN COUNT(DISTINCT si.fk_sales_order) <= 74 
+		   THEN 'B'
+		   ELSE 'A' END 'supplier_class'
+  
+	FROM StagingDB_Replica.Gathering.tblSalesItem si
+	LEFT JOIN StagingDB_Replica.Gathering.tblSupplierCatalog sc
+	ON si.fk_supplier = sc.id_supplier
+	WHERE si.finance_verified_at IS NOT NULL
+	AND MONTH(si.created_at) = CASE WHEN MONTH(GETDATE()) = 1 THEN 12 ELSE MONTH(GETDATE())-1 END
+	AND YEAR(si.created_at) = CASE WHEN MONTH(GETDATE()) = 1 THEN YEAR(GETDATE())-1 ELSE YEAR(GETDATE()) END
+	GROUP BY sc.id_supplier`
+
+	// write query result to an array of supplierscorerow.SupplierScoreRow, this array of rows represents ttrRfcTable
+	var iDSupplier, supplierClass string
+	var netOrder int
+	var supplierClassTable []supplierscorerow.SupplierScoreRow
+
+	rows, err := db.Query(query)
+	checkError(err)
+
+	for rows.Next() {
+		err := rows.Scan(&iDSupplier, &netOrder, &supplierClass)
+		checkError(err)
+		supplierClassTable = append(supplierClassTable,
+			supplierscorerow.SupplierScoreRow{
+				IDSupplier:    iDSupplier,
+				NetOrder:      netOrder,
+				SupplierClass: supplierClass})
+	}
+
+	return supplierClassTable
 }
 
 func checkError(err error) {

@@ -3,7 +3,7 @@ package validationtogsheet
 import (
 	"io/ioutil"
 
-	"github.com/thomas-bamilo/operationsellerscoring/updategsheetvalidation/createvalidation"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/updategsheetvalidation/createvalidation"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"gopkg.in/Iwark/spreadsheet.v2"

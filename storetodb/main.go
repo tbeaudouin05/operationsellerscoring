@@ -3,11 +3,11 @@ package main
 import (
 	"log"
 
-	"github.com/thomas-bamilo/operationsellerscoring/connectdb"
-	"github.com/thomas-bamilo/operationsellerscoring/inboundissuerow"
-	"github.com/thomas-bamilo/operationsellerscoring/sellerrejectionrow"
-	"github.com/thomas-bamilo/operationsellerscoring/storetodb/baadbinteract"
-	"github.com/thomas-bamilo/operationsellerscoring/storetodb/gsheetinteract"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/inboundissuerow"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/sellerrejectionrow"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/storetodb/baadbinteract"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/storetodb/gsheetinteract"
+	"github.com/thomas-bamilo/sql/connectdb"
 )
 
 func main() {

@@ -6,17 +6,21 @@ import (
 	"time"
 
 	"github.com/joho/sqltocsv"
-	"github.com/thomas-bamilo/operationsellerscoring/supplierscorerow"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/supplierscorerow"
 )
 
 // CreateTtrRfcInboundScoreRtsTable creates and output the ttr, rfc, inbound and rts scores of each supplier
-func CreateTtrRfcInboundScoreRtsTable(dbSQLite *sql.DB, ttrRfcTable []supplierscorerow.SupplierScoreRow, inboundScoreTable []supplierscorerow.SupplierScoreRow) {
+func CreateTtrRfcInboundScoreRtsTable(dbSQLite *sql.DB, ttrRfcTable []supplierscorerow.SupplierScoreRow, inboundScoreTable []supplierscorerow.SupplierScoreRow, rtsTable []supplierscorerow.SupplierScoreRow, supplierClassTable []supplierscorerow.SupplierScoreRow) {
 
 	createTtrRfcTable(dbSQLite, ttrRfcTable)
 
 	createInboundScoreTable(dbSQLite, inboundScoreTable)
 
 	createTtrRfcInboundView(dbSQLite)
+
+	createRtsTable(dbSQLite, rtsTable)
+
+	createSupplierClassTable(dbSQLite, supplierClassTable)
 
 	joinTable(dbSQLite)
 
@@ -46,15 +50,45 @@ func createTtrRfcTable(db *sql.DB, ttrRfcTable []supplierscorerow.SupplierScoreR
 	,rfc_score) 
 	VALUES (?, ?, ?, ?, ?)`
 	insertTtrRfcTable, err := db.Prepare(insertTtrRfcTableStr)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkError(err)
 	for i := 0; i < len(ttrRfcTable); i++ {
 		insertTtrRfcTable.Exec(ttrRfcTable[i].YearMonth,
 			ttrRfcTable[i].SupplierName,
 			ttrRfcTable[i].IDSupplier,
 			ttrRfcTable[i].AvgTtrDay,
 			ttrRfcTable[i].RfcScore,
+		)
+		time.Sleep(1 * time.Millisecond)
+	}
+
+}
+
+// create the SQLite table supplier_class with the data from supplierClassTable, an array of SupplierScoreRow
+func createSupplierClassTable(db *sql.DB, supplierClassTable []supplierscorerow.SupplierScoreRow) {
+
+	// create supplier_class table
+	createSupplierClassTableStr := `CREATE TABLE supplier_class (
+	id_supplier INTEGER
+	,net_order INTEGER
+	,supplier_class TEXT)`
+
+	createSupplierClassTable, err := db.Prepare(createSupplierClassTableStr)
+	checkError(err)
+	createSupplierClassTable.Exec()
+
+	// insert values into supplier_class table
+	insertSupplierClassTableStr := `INSERT INTO supplier_class (
+	id_supplier
+	,net_order
+	,supplier_class) 
+	VALUES (?, ?, ?)`
+	insertSupplierClassTable, err := db.Prepare(insertSupplierClassTableStr)
+	checkError(err)
+	for i := 0; i < len(supplierClassTable); i++ {
+		insertSupplierClassTable.Exec(
+			supplierClassTable[i].IDSupplier,
+			supplierClassTable[i].NetOrder,
+			supplierClassTable[i].SupplierClass,
 		)
 		time.Sleep(1 * time.Millisecond)
 	}
@@ -83,9 +117,7 @@ func createInboundScoreTable(db *sql.DB, inboundScoreTable []supplierscorerow.Su
 	,inbound_score) 
 	VALUES (?,?,?,?)`
 	insertInboundScoreTable, err := db.Prepare(insertInboundScoreTableStr)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkError(err)
 	for i := 0; i < len(inboundScoreTable); i++ {
 		insertInboundScoreTable.Exec(
 			inboundScoreTable[i].YearMonth,
@@ -120,9 +152,7 @@ func createRtsTable(db *sql.DB, rtsTable []supplierscorerow.SupplierScoreRow) {
 	,rts_score) 
 	VALUES (?,?,?,?)`
 	insertRtsTable, err := db.Prepare(insertRtsTableStr)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkError(err)
 	for i := 0; i < len(rtsTable); i++ {
 		insertRtsTable.Exec(
 			rtsTable[i].YearMonth,
@@ -174,6 +204,20 @@ func createTtrRfcInboundView(db *sql.DB) {
 func joinTable(db *sql.DB) {
 	// store the query in a string
 	query := `
+	SELECT 
+	trirsc.year_month
+	,trirsc.supplier_name
+	,trirsc.id_supplier
+	,trirsc.avg_ttr_day
+	,trirsc.rfc_score
+	,trirsc.inbound_score
+	,trirsc.rts_score
+	,trirsc.avg_ttr_day + trirsc.rfc_score + trirsc.inbound_score + trirsc.rts_score 'final_score'
+	,trirsc.net_order
+	,trirsc.supplier_class
+
+	FROM (
+	SELECT * FROM (
 	SELECT
 	COALESCE(iss_tr.year_month,rts.year_month) 'year_month'
 	,COALESCE(iss_tr.supplier_name,rts.supplier_name) 'supplier_name'
@@ -192,31 +236,35 @@ func joinTable(db *sql.DB) {
 	,COALESCE(iss_tr.avg_ttr_day,0) 'avg_ttr_day'
 	,COALESCE(iss_tr.rfc_score,0) 'rfc_score'
 	,COALESCE(iss_tr.inbound_score,0) 'inbound_score'
+	,COALESCE(rts.rts_score,0) 'rts_score'
 	FROM rts
 	LEFT JOIN iss_tr USING(id_supplier)
-	WHERE iss_tr.year_month IS NULL`
+	WHERE iss_tr.year_month IS NULL) trir
+	LEFT JOIN supplier_class sc USING(id_supplier)) trirsc`
 
-	var yearMonth, supplierName, iDSupplier string
-	var avgTtrDay, rfcScore, inboundScore, rtsScore float32
+	var yearMonth, supplierName, iDSupplier, supplierClass string
+	var avgTtrDay, rfcScore, inboundScore, rtsScore, finalScore float32
+	var netOrder int
 	var supplierScoreTable []supplierscorerow.SupplierScoreRow
 
 	rows, err := db.Query(query)
 	checkError(err)
 
 	for rows.Next() {
-		err := rows.Scan(&yearMonth, &supplierName, &iDSupplier, &avgTtrDay, &rfcScore, &inboundScore, &rtsScore)
-		if err != nil {
-			log.Fatal(err)
-		}
+		err := rows.Scan(&yearMonth, &supplierName, &iDSupplier, &avgTtrDay, &rfcScore, &inboundScore, &rtsScore, &finalScore, &netOrder, &supplierClass)
+		checkError(err)
 		supplierScoreTable = append(supplierScoreTable,
 			supplierscorerow.SupplierScoreRow{
-				YearMonth:    yearMonth,
-				SupplierName: supplierName,
-				IDSupplier:   iDSupplier,
-				AvgTtrDay:    avgTtrDay,
-				RfcScore:     rfcScore,
-				InboundScore: inboundScore,
-				RtsScore:     rtsScore,
+				YearMonth:     yearMonth,
+				SupplierName:  supplierName,
+				IDSupplier:    iDSupplier,
+				AvgTtrDay:     avgTtrDay,
+				RfcScore:      rfcScore,
+				InboundScore:  inboundScore,
+				RtsScore:      rtsScore,
+				FinalScore:    finalScore,
+				NetOrder:      netOrder,
+				SupplierClass: supplierClass,
 			})
 		err = sqltocsv.WriteFile("supplierscore.csv", rows)
 		checkError(err)

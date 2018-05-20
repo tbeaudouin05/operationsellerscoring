@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/thomas-bamilo/operationsellerscoring/connectdb"
-	"github.com/thomas-bamilo/operationsellerscoring/updategsheetvalidation/createvalidation"
-	"github.com/thomas-bamilo/operationsellerscoring/updategsheetvalidation/validationtogsheet"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/updategsheetvalidation/createvalidation"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/updategsheetvalidation/validationtogsheet"
+	"github.com/thomas-bamilo/sql/connectdb"
 )
 
 func main() {

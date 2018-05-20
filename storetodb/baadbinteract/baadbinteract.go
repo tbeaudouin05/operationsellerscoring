@@ -9,16 +9,16 @@ import (
 	"github.com/gocarina/gocsv"
 	// SQL Server driver
 	_ "github.com/denisenkom/go-mssqldb"
-	"github.com/thomas-bamilo/operationsellerscoring/inboundissuerow"
-	"github.com/thomas-bamilo/operationsellerscoring/sellerrejectionrow"
-	"github.com/thomas-bamilo/operationsellerscoring/supplierscorerow"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/inboundissuerow"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/sellerrejectionrow"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/supplierscorerow"
 )
 
 // LoadInboundIssueTableValidRowToBaaDb loads InboundIssueTableValidRow to baa database
 func LoadInboundIssueTableValidRowToBaaDb(db *sql.DB, inboundIssueTableValidRow []inboundissuerow.InboundIssueRow) {
 
 	// prepare statement to insert values into inbound_issue table
-	insertInboundIssueTableStr := `INSERT INTO baa_application.baa_application_schema.inbound_issue (
+	insertInboundIssueTableStr := `INSERT INTO baa_application.operation.inbound_issue (
 		id_inbound_issue
 		,timestamp 
 		,po_number 
@@ -45,7 +45,6 @@ func LoadInboundIssueTableValidRowToBaaDb(db *sql.DB, inboundIssueTableValidRow 
 	// and write csvErrorLog to csvErrorLog.csv
 	// csvErrorLog should not contain any data - all data validation should already been taken care of by the application
 	for i := 0; i < len(inboundIssueTableValidRow); i++ {
-		log.Println("row number " + string(i))
 		_, err = insertInboundIssueTable.Exec(
 			inboundIssueTableValidRow[i].IDInboundIssue,
 			inboundIssueTableValidRow[i].Timestamp,
@@ -102,7 +101,7 @@ func LoadInboundIssueTableValidRowToBaaDb(db *sql.DB, inboundIssueTableValidRow 
 func LoadSellerRejectionTableValidRowToBaaDb(db *sql.DB, sellerRejectionTableValidRow []sellerrejectionrow.SellerRejectionRow) {
 
 	// prepare statement to insert values into seller_rejection table
-	insertSellerRejectionTableStr := `INSERT INTO baa_application.baa_application_schema.seller_rejection (
+	insertSellerRejectionTableStr := `INSERT INTO baa_application.operation.seller_rejection (
 		id_seller_rejection
 		,timestamp 
 		,item_uid
@@ -179,12 +178,12 @@ func LoadSellerRejectionTableValidRowToBaaDb(db *sql.DB, sellerRejectionTableVal
 
 }
 
-// GetIDInboundIssueFromBaa gets all the existing id_inbound_issue from baa_application.baa_application_schema.inbound_issue and store then into an array of inboundissuerow.InboundIssueRow
+// GetIDInboundIssueFromBaa gets all the existing id_inbound_issue from baa_application.operation.inbound_issue and store then into an array of inboundissuerow.InboundIssueRow
 func GetIDInboundIssueFromBaa(db *sql.DB) []inboundissuerow.InboundIssueRow {
 
 	// store iDInboundQuery in a string
 	iDInboundQuery := `SELECT ii.id_inbound_issue 
-	FROM baa_application.baa_application_schema.inbound_issue ii`
+	FROM baa_application.operation.inbound_issue ii`
 
 	// write iDInboundQuery result to an array of inboundissuerow.InboundIssueRow, this array of rows represents iDInboundIssueTable
 	var iDInboundIssue string
@@ -203,12 +202,12 @@ func GetIDInboundIssueFromBaa(db *sql.DB) []inboundissuerow.InboundIssueRow {
 	return iDInboundIssueTable
 }
 
-// GetIDSellerRejectionFromBaa gets all the existing id_seller_rejection from baa_application.baa_application_schema.seller_rejection and store then into an array of sellerrejectionrow.SellerRejectionRow
+// GetIDSellerRejectionFromBaa gets all the existing id_seller_rejection from baa_application.operation.seller_rejection and store then into an array of sellerrejectionrow.SellerRejectionRow
 func GetIDSellerRejectionFromBaa(db *sql.DB) []sellerrejectionrow.SellerRejectionRow {
 
 	// store iDSellerRejectionQuery in a string
 	iDSellerRejectionQuery := `SELECT sr.id_seller_rejection 
-	FROM baa_application.baa_application_schema.seller_rejection sr`
+	FROM baa_application.operation.seller_rejection sr`
 
 	// write iDSellerRejectionQuery result to an array of sellerrejectionrow.SellerRejectionRow, this array of rows represents iDSellerRejectionTable
 	var iDSellerRejection string
@@ -261,7 +260,7 @@ func InboundScoreTableFromBaa(db *sql.DB) []supplierscorerow.SupplierScoreRow {
 	THEN 3
 	ELSE 0 END) / CAST(COUNT(ii.item_issue_inbound_failed_reason) AS FLOAT) 'inbound_score'
 	 
-	FROM  baa_application.baa_application_schema.inbound_issue ii
+	FROM  baa_application.operation.inbound_issue ii
   
 	WHERE ii.fk_supplier <> 0
 	
@@ -325,13 +324,13 @@ func RtsTableFromBaa(db *sql.DB) []supplierscorerow.SupplierScoreRow {
   ,'Missing Parts/Items'
   ,'Without Any Specific Reason'
   ,'Wrong Return Reason'
-  ,'Not Compliant with return Policy'
 )
 	THEN 1
 	WHEN sr.rts_seller_rejection_reason IN (
   'Damaged Item'
   ,'Damaged Package'
   ,'Missed 30 Days SLA'
+  ,'Not Compliant with return Policy'
 ) 
 	THEN 2
 	WHEN sr.rts_seller_rejection_reason IN (
@@ -341,7 +340,7 @@ func RtsTableFromBaa(db *sql.DB) []supplierscorerow.SupplierScoreRow {
 	THEN 3
 	ELSE 0 END) / CAST(COUNT(sr.rts_seller_rejection_reason) AS FLOAT) 'rts_score'
 	 
-	FROM  baa_application.baa_application_schema.seller_rejection sr
+	FROM  baa_application.operation.seller_rejection sr
   
 	WHERE sr.fk_supplier <> 0
 	

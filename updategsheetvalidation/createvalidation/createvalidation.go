@@ -30,7 +30,7 @@ func QueryIDSupplierTable(db *sql.DB) []IDSupplierRow {
 	// store iDSupplierQuery in a string
 	iDSupplierQuery := `SELECT
   
-	is1.id_supplier
+	is1.bob_id_supplier 'id_supplier'
 	,is1.name_en 'supplier_name'
 	
 	FROM ims_sales_order_item isoi

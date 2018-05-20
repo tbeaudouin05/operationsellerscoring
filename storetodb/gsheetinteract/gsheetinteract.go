@@ -8,13 +8,13 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/thomas-bamilo/operationsellerscoring/inboundissuerow"
-	"github.com/thomas-bamilo/operationsellerscoring/sellerrejectionrow"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/inboundissuerow"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/sellerrejectionrow"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"gopkg.in/Iwark/spreadsheet.v2"
 
-	"github.com/thomas-bamilo/operationsellerscoring/storetodb/baadbinteract"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/storetodb/baadbinteract"
 )
 
 // CreateInboundIssueTable fetches data from a gsheet to create an array of InboundIssueRow which represents inboundIssueTable, the table which records:

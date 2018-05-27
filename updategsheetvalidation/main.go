@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/thomas-bamilo/operation/operationsellerscoring/updategsheetvalidation/createvalidation"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/updategsheetvalidation/dbinteract"
 	"github.com/thomas-bamilo/operation/operationsellerscoring/updategsheetvalidation/validationtogsheet"
 	"github.com/thomas-bamilo/sql/connectdb"
 )
@@ -18,7 +18,7 @@ func main() {
 
 	omsDb := connectdb.ConnectToOms()
 	defer omsDb.Close()
-	omsIDSupplierTable := createvalidation.QueryIDSupplierTable(omsDb)
+	omsIDSupplierTable := dbinteract.QueryIDSupplierTable(omsDb)
 	inboundIssueIDSupplierGsheet := validationtogsheet.GetGsheet("1wDTaZVLmos6-B79626H1531_JMgo1b5nBDKJP7NwsPU", 1001607611)
 	validationtogsheet.IDSupplierValidationToGsheet(omsIDSupplierTable, inboundIssueIDSupplierGsheet)
 	sellerRejectionIDSupplierGsheet := validationtogsheet.GetGsheet("12zINw_v3OSirIDjKGheU07G8kBfNgWStG8kVzHvRD6U", 1860332800)
@@ -27,8 +27,8 @@ func main() {
 	inboundIssueResponseGsheet := validationtogsheet.GetGsheet("1wDTaZVLmos6-B79626H1531_JMgo1b5nBDKJP7NwsPU", 199289760)
 	baaDb := connectdb.ConnectToBaa()
 	defer baaDb.Close()
-	createvalidation.EmailToBaa(inboundIssueResponseGsheet, baaDb)
-	emailTable := createvalidation.BaaToEmailTable(baaDb)
+	dbinteract.EmailToBaa(inboundIssueResponseGsheet, baaDb)
+	emailTable := dbinteract.BaaToEmailTable(baaDb)
 	inboundIssueIDEmailGsheet := validationtogsheet.GetGsheet("1wDTaZVLmos6-B79626H1531_JMgo1b5nBDKJP7NwsPU", 1898441539)
 	validationtogsheet.EmailValidationToGsheet(emailTable, inboundIssueIDEmailGsheet)
 

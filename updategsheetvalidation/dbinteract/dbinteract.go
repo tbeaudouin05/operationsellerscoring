@@ -1,4 +1,4 @@
-package createvalidation
+package dbinteract
 
 import (
 	"database/sql"
@@ -79,7 +79,7 @@ func EmailToBaa(gsheet *spreadsheet.Sheet, dbBaa *sql.DB) {
 	newEmailTable := newEmail(oldEmailTable, uniqueEmailTable)
 
 	// prepare statement to insert values into inbound_issue table
-	insertEmailTableStr := `INSERT INTO baa_application.baa_application_schema.inbound_issue_email (email) 
+	insertEmailTableStr := `INSERT INTO baa_application.operation.inbound_issue_email (email) 
 	VALUES (@p1)`
 	insertEmailTable, err := dbBaa.Prepare(insertEmailTableStr)
 	if err != nil {
@@ -136,7 +136,7 @@ func newEmail(oldEmailTable, emailTable []EmailRow) (newEmailTable []EmailRow) {
 func BaaToEmailTable(dbBaa *sql.DB) []EmailRow {
 
 	// store the query in a string
-	query := `SELECT iie.email, iie.id_email FROM baa_application.baa_application_schema.inbound_issue_email iie`
+	query := `SELECT iie.email, iie.id_email FROM baa_application.operation.inbound_issue_email iie`
 
 	var email, iDEmail string
 	var emailTable []EmailRow

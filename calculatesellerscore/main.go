@@ -4,9 +4,9 @@ import (
 	"log"
 
 	"github.com/thomas-bamilo/email/goemail"
-	"github.com/thomas-bamilo/operationsellerscoring/calculatesellerscore/bidbinteract"
-	"github.com/thomas-bamilo/operationsellerscoring/calculatesellerscore/sqliteinteract"
-	"github.com/thomas-bamilo/operationsellerscoring/storetodb/baadbinteract"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/calculatesellerscore/bidbinteract"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/calculatesellerscore/sqliteinteract"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/storetodb/baadbinteract"
 	"github.com/thomas-bamilo/sql/connectdb"
 )
 

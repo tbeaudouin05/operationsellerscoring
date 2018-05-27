@@ -3,7 +3,7 @@ package validationtogsheet
 import (
 	"io/ioutil"
 
-	"github.com/thomas-bamilo/operation/operationsellerscoring/updategsheetvalidation/createvalidation"
+	"github.com/thomas-bamilo/operation/operationsellerscoring/updategsheetvalidation/dbinteract"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"gopkg.in/Iwark/spreadsheet.v2"
@@ -30,7 +30,7 @@ func GetGsheet(spreadsheetID string, sheetID uint) *spreadsheet.Sheet {
 }
 
 // IDSupplierValidationToGsheet retrieves omsIDSupplierTable from oms_database and writes it to spreadsheet>idSheet
-func IDSupplierValidationToGsheet(omsIDSupplierTable []createvalidation.IDSupplierRow, gsheet *spreadsheet.Sheet) {
+func IDSupplierValidationToGsheet(omsIDSupplierTable []dbinteract.IDSupplierRow, gsheet *spreadsheet.Sheet) {
 
 	// erase all previous data from gsheet CAREFUL!
 	for _, row := range gsheet.Rows {
@@ -58,7 +58,7 @@ func IDSupplierValidationToGsheet(omsIDSupplierTable []createvalidation.IDSuppli
 }
 
 // EmailValidationToGsheet retrieves omsIDSupplierTable from oms_database and writes it to https://goo.gl/PRgBcy
-func EmailValidationToGsheet(emailTable []createvalidation.EmailRow, gsheet *spreadsheet.Sheet) {
+func EmailValidationToGsheet(emailTable []dbinteract.EmailRow, gsheet *spreadsheet.Sheet) {
 
 	// erase all previous data from gsheet CAREFUL!
 	for _, row := range gsheet.Rows {

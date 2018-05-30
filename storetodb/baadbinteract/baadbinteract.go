@@ -251,7 +251,11 @@ func InboundScoreTableFromBaa(db *sql.DB) []supplierscorerow.SupplierScoreRow {
 	,'Bad Packaging'
 	,'Extra Items Sent by Seller'
 	,'Items Not Sorted'
-	,'Wrong Item') 
+	,'Wrong Item'
+	,'Merchant - Wrong color'
+	,'Merchant - wrong item'
+	,'Merchant - wrong size'
+	,'merchant - wrong content') 
 	THEN 2
 	WHEN ii.item_issue_inbound_failed_reason IN (
 	'Defective Item'
@@ -274,6 +278,10 @@ func InboundScoreTableFromBaa(db *sql.DB) []supplierscorerow.SupplierScoreRow {
 	,'Defective/Wrong Invoice'
 	,'No Invoice'
 	,'Other'
+	,'Merchant - Wrong color'
+	,'Merchant - wrong item'
+	,'Merchant - wrong size'
+	,'merchant - wrong content'
 	)
 	
 	AND MONTH(ii.timestamp) = CASE WHEN MONTH(GETDATE()) = 1 THEN 12 ELSE MONTH(GETDATE())-1 END

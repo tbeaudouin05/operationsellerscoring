@@ -32,7 +32,7 @@ func CreateTtrRfcTable(db *sql.DB) []supplierscorerow.SupplierScoreRow {
 	FROM (
 	SELECT  
 	
-	  sc.name_en 'supplier_name'
+	  sc.name 'supplier_name'
 	  ,sc.id_supplier
 	  ,(AVG(DATEDIFF(HOUR,si.sourcing_at,si.crossdocking_po_ordered_at)) - 48)/24.000 'avg_ttr_day'
 	  
@@ -47,13 +47,13 @@ func CreateTtrRfcTable(db *sql.DB) []supplierscorerow.SupplierScoreRow {
 	  AND MONTH(si.created_at) = CASE WHEN MONTH(GETDATE()) = 1 THEN 12 ELSE MONTH(GETDATE())-1 END
 		AND YEAR(si.created_at) = CASE WHEN MONTH(GETDATE()) = 1 THEN YEAR(GETDATE())-1 ELSE YEAR(GETDATE()) END
 	
-	  GROUP BY   sc.name_en, sc.id_supplier) ttr
+	  GROUP BY   sc.name, sc.id_supplier) ttr
 	
 	  FULL OUTER JOIN
 	
 	  (SELECT  
 	
-	  sc.name_en 'supplier_name'
+	  sc.name 'supplier_name'
 	  ,sc.id_supplier
 	
 	  ,SUM(CASE 
@@ -107,7 +107,7 @@ func CreateTtrRfcTable(db *sql.DB) []supplierscorerow.SupplierScoreRow {
 	  AND MONTH(si.created_at) = CASE WHEN MONTH(GETDATE()) = 1 THEN 12 ELSE MONTH(GETDATE())-1 END
 		AND YEAR(si.created_at) = CASE WHEN MONTH(GETDATE()) = 1 THEN YEAR(GETDATE())-1 ELSE YEAR(GETDATE()) END
 	
-	  GROUP BY sc.id_supplier, sc.name_en) rfc
+	  GROUP BY sc.id_supplier, sc.name) rfc
 	
 	  ON rfc.id_supplier = ttr.id_supplier`
 
